@@ -38,6 +38,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -141,7 +142,9 @@ func (c *Client) runWithJSON(ctx context.Context, req *Request, resp interface{}
 		if res.StatusCode != http.StatusOK {
 			return fmt.Errorf("server returned a non-200 status code: %v", res.StatusCode)
 		}
-		return errors.Wrap(err, "decoding response")
+		sep := " | "
+		indentedBody := sep + strings.Join(strings.Split(strings.Trim(buf.String(), " \n\t\r"), "\n"), "\n"+sep)
+		return fmt.Errorf("decoding response:\n%s\nerror: %w", indentedBody, err)
 	}
 	if len(gr.Errors) > 0 {
 		// return first error
