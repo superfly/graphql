@@ -142,8 +142,14 @@ func (c *Client) runWithJSON(ctx context.Context, req *Request, resp interface{}
 		if res.StatusCode != http.StatusOK {
 			return fmt.Errorf("server returned a non-200 status code: %v", res.StatusCode)
 		}
+		var indentedBodyBuffer bytes.Buffer
+		var indentedBody string
 		sep := " | "
-		indentedBody := sep + strings.Join(strings.Split(strings.Trim(buf.String(), " \n\t\r"), "\n"), "\n"+sep)
+		if err := json.Indent(&indentedBodyBuffer, buf.Bytes(), sep, "  "); err != nil {
+			indentedBody = sep + strings.Join(strings.Split(strings.Trim(buf.String(), " \n\t\r"), "\n"), "\n"+sep)
+		} else {
+			indentedBody = sep + indentedBodyBuffer.String()
+		}
 		return fmt.Errorf("decoding response:\n%s\nerror: %w", indentedBody, err)
 	}
 	if len(gr.Errors) > 0 {
