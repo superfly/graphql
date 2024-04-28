@@ -43,6 +43,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+type ResponseWithHeader struct {
+	header http.Header
+}
+
+func (rwh *ResponseWithHeader) SetHeader(h http.Header) {
+	rwh.header = h
+}
+
 // Client is a client for interacting with a GraphQL API.
 type Client struct {
 	endpoint         string
@@ -211,10 +219,16 @@ func (c *Client) runWithPostFields(ctx context.Context, req *Request, resp inter
 	if _, err := io.Copy(&buf, res.Body); err != nil {
 		return errors.Wrap(err, "reading body")
 	}
+
 	c.logf("<< %s", buf.String())
 	if err := json.NewDecoder(&buf).Decode(&gr); err != nil {
 		return errors.Wrap(err, "decoding response")
 	}
+
+	if h, ok := gr.Data.(*ResponseWithHeader); ok {
+		h.SetHeader(res.Header)
+	}
+
 	if len(gr.Errors) > 0 {
 		// return first error
 		return &gr.Errors[0]
