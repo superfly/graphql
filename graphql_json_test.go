@@ -2,6 +2,7 @@ package graphql
 
 import (
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -93,6 +94,39 @@ func TestDoJSONBadRequestErr(t *testing.T) {
 	err := client.Run(ctx, &Request{q: "query {}"}, &responseData)
 	is.Equal(calls, 1) // calls
 	is.Equal(err.Error(), "miscellaneous message as to why the the request was bad")
+}
+
+func TestDoJSONErrorWithPath(t *testing.T) {
+	is := is.New(t)
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		is.Equal(r.Method, http.MethodPost)
+		b, err := ioutil.ReadAll(r.Body)
+		is.NoErr(err)
+		is.Equal(string(b), `{"query":"query {}","variables":null}`+"\n")
+		w.WriteHeader(http.StatusOK)
+		io.WriteString(w, `{
+			"errors": [{
+				"message": "miscellaneous message as to why the the request was bad",
+				"path": ["nodes", 1, "name"]
+			}]
+		}`)
+	}))
+	defer srv.Close()
+
+	ctx := context.Background()
+	client := NewClient(srv.URL)
+
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+	var responseData map[string]interface{}
+	err := client.Run(ctx, &Request{q: "query {}"}, &responseData)
+	is.Equal(calls, 1) // calls
+
+	gqlErr := &GraphQLError{}
+	is.True(errors.As(err, &gqlErr))
+	is.Equal(gqlErr.Message, "miscellaneous message as to why the the request was bad")
 }
 
 func TestQueryJSON(t *testing.T) {

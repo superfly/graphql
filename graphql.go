@@ -320,7 +320,7 @@ type File struct {
 type GraphQLError struct {
 	err        error
 	Message    string
-	Path       []string
+	Path       []interface{}
 	Extensions GraphQLErrorExtensions
 }
 
