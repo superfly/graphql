@@ -353,6 +353,10 @@ func (gqlErr *GraphQLError) Error() string {
 	}
 }
 
+func (gqlErr *GraphQLError) Unwrap() error {
+	return gqlErr.err
+}
+
 func IsClientError(err error) bool {
 	gqlErr, ok := err.(*GraphQLError)
 	return ok && gqlErr.err != nil && len(gqlErr.Extensions.Code) == 0
